@@ -50,12 +50,10 @@ func buildConsoleUrl(project string) string {
 
 var consoleCmd = &cobra.Command{
 	Use:   "console",
-	Short: "open web console with a given project",
-	Long: `open web console with a given project
-
-	Use either --project or --config flag to specify which project you want open.
-	If no flag is used, open the current active project.`,
-	RunE:  func (cmd *cobra.Command, args []string) error {
+	Short: "Open the Google Cloud Console in browser.",
+	Long: `Opens the Google Cloud Console in your default web browser.
+Targets the current active project by default, or a specific project/config if specified.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
 		if user_project != "" && config_name != "" {
 			return fmt.Errorf("can't use --project and --config together")
 		}
@@ -87,6 +85,6 @@ var consoleCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(consoleCmd)
-	consoleCmd.Flags().StringVar(&user_project, "project", "", "gcloud project name")
-	consoleCmd.Flags().StringVarP(&config_name, "config", "c", "", "gcloud config name")
+	consoleCmd.Flags().StringVar(&user_project, "project", "", "Target Project ID")
+	consoleCmd.Flags().StringVarP(&config_name, "config", "c", "", "Use Project ID from this gcloud configuration")
 }

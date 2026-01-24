@@ -8,7 +8,8 @@ import (
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "gcp",
-	Short: "A buch of tools extending capabilities of gcloud CLI.",
+	Short: "GCP CLI extensions for common gcloud operations.",
+	Long:  `A collection of tools to extend and simplify common gcloud CLI capabilities, including managing configurations, builds, and console access.`,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

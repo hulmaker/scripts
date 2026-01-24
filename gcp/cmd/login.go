@@ -120,13 +120,15 @@ func login(cmd *cobra.Command, args []string) error {
 }
 
 var loginCmd = &cobra.Command{
-	Use:   "login <config>",
-	Short: "Login to your gcloud account.",
-	RunE:  login,
+	Use:   "login <config-name>",
+	Short: "Authenticate and setup a gcloud configuration.",
+	Long: `Authenticate with Google Cloud and setup a specific configuration with project and account settings.
+It ensures application default credentials are set correctly for local development.`,
+	RunE: login,
 }
 
 func init() {
 	rootCmd.AddCommand(loginCmd)
-	loginCmd.Flags().StringVar(&project, "project", "", "gcloud project name")
-	loginCmd.Flags().StringVar(&account, "account", "", "account name (email) registered with gcp")
+	loginCmd.Flags().StringVar(&project, "project", "", "Google Cloud Project ID")
+	loginCmd.Flags().StringVar(&account, "account", "", "Google Cloud Account Email")
 }

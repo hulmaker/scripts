@@ -1,20 +1,37 @@
-# scripts
-A collection of CLI tools.
+# Scripts
 
-## Installation
- 1. Use `make` to build and link everything into a new folder `./bin`.
- 2. Either add `bin` to your `PATH` manually, or use `source  setup_env.sh`
+A collection of personal CLI tools and scripts.
+
+## Usage
+
+### Install (Recommended)
+Builds all tools and symlinks them to `~/.local/bin`.
+
+```bash
+make install
 ```
 
+To remove them later:
+```bash
+make uninstall
 ```
-todo - installation steps, using setup_env.sh
 
-**Available tools**:
- - gcp:
-    - login: switch between gcp SDK configurations.
-    - builds
-        - list: list recent cloud builds.
-        - watch: observe an active cloud build and run a command after it's done.
-    - console: open web gcp console with currently set project
- - modified_files: finds all files that have been modified in the current git branch.
+### Local Build
+Builds everything into a local `./bin` directory without modifying your system path.
 
+```bash
+make
+```
+
+To use these locally, add `./bin` to `PATH`
+
+```bash
+export PATH="$(pwd)/bin:$PATH"
+```
+
+## Tools
+
+| Tool | Description |
+|------|-------------|
+| `gcp` | Google Cloud Platform helper (login context, build monitoring, console shortcuts). |
+| `modified_files` | Lists files modified in the current git branch (useful for piping to linters). |

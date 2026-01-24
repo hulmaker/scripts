@@ -33,3 +33,6 @@ go.work.sum
 
 # Local bin directory
 bin/
+
+*/.DS_Store
+

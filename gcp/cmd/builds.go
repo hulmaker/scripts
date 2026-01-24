@@ -106,16 +106,13 @@ func CmdListBuilds(limit uint, filter string, ongoing bool) *exec.Cmd {
 
 var listCmd = &cobra.Command{
 	Use:   "list",
-	Short: "List recent cloud builds.",
-	Long: `List recent cloud builds.
+	Short: "List and filter Cloud Builds.",
+	Long: `List recent cloud builds with formatting options.
 
-	Example:
-		gcp builds list -l 10 -w 40 --ongoing --filter="create_time>2026-01-20"
+Examples:
+  gcp builds list -l 10 -w 40 --ongoing --filter="create_time>2026-01-20"
 
-	Docs: https://docs.cloud.google.com/build/docs/view-build-results
-
-	Then you can see the detailed build logs with:
-	gcloud builds log <id>`,
+Docs: https://docs.cloud.google.com/build/docs/view-build-results`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		width, _ := cmd.Flags().GetUint("column-width")
 		limit, _ := cmd.Flags().GetUint("limit")
@@ -208,8 +205,9 @@ func runCommand(build *Build, command string) error {
 }
 
 var watchCmd = &cobra.Command{
-	Use:   "watch <id>",
-	Short: "Watch a cloud build, receive notification, or run a command when it's done.",
+	Use:   "watch <build-id>",
+	Short: "Monitor a build and trigger actions on completion.",
+	Long:  `Polls the status of a specific build. Can send a desktop notification or run a shell command when the build finishes.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 1 {
 			return fmt.Errorf("please provide the build <id>")
@@ -236,22 +234,22 @@ var watchCmd = &cobra.Command{
 
 var buildsCmd = &cobra.Command{
 	Use:   "builds",
-	Short: "Manage cloud builds.",
+	Short: "Utilities for Cloud Builds.",
 }
 
 func init() {
 	rootCmd.AddCommand(buildsCmd)
 	buildsCmd.AddCommand(listCmd, watchCmd)
-	buildsCmd.PersistentFlags().StringVar(&gcloud_project, "project", "", "gcloud project ID")
-	buildsCmd.PersistentFlags().StringVar(&gcloud_region, "region", "", "gcloud region e.g. europe-west1")
+	buildsCmd.PersistentFlags().StringVar(&gcloud_project, "project", "", "Google Cloud Project ID (overrides default)")
+	buildsCmd.PersistentFlags().StringVar(&gcloud_region, "region", "", "Google Cloud Region (e.g. europe-west1)")
 
-	listCmd.Flags().UintP("column-width", "w", 40, "maximum column width")
-	listCmd.Flags().UintP("limit", "l", 50, "maximum number of builds to show")
-	listCmd.Flags().BoolP("ongoing", "o", false, "show only builds that didn't yet finish")
-	listCmd.Flags().String("filter", "", "gcloud builds list filter")
+	listCmd.Flags().UintP("column-width", "w", 40, "Max width for output columns")
+	listCmd.Flags().UintP("limit", "l", 50, "Max number of builds to list")
+	listCmd.Flags().BoolP("ongoing", "o", false, "Show only unfinished builds")
+	listCmd.Flags().String("filter", "", "Filter expression (e.g. 'status=SUCCESS')")
 
-	watchCmd.Flags().UintP("sleep", "s", 60, "number of seconds between refreshes")
-	watchCmd.Flags().String("command", "", "run this after the build finishes (show notification if no command provided)")
-	watchCmd.Flags().BoolP("only-success", "o", false, "run the comand if and only if the build finishes with 'SUCCESS' status")
-	watchCmd.Flags().UintP("retry", "r", 5, "maximum number of retries if checking build status fails")
+	watchCmd.Flags().UintP("sleep", "s", 60, "Polling interval in seconds")
+	watchCmd.Flags().String("command", "", "Shell command to run upon completion")
+	watchCmd.Flags().BoolP("only-success", "o", false, "Only run command if build succeeds")
+	watchCmd.Flags().UintP("retry", "r", 5, "Max retries for status checks")
 }
