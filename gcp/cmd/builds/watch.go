@@ -17,23 +17,6 @@ type Build struct {
 	FinishTime string `json:"finishTime"`
 }
 
-var (
-	GcloudProject string
-	GcloudRegion  string
-)
-
-func ParseAdditionalArgs() []string {
-	args := []string{}
-	if GcloudProject != "" {
-		args = append(args, fmt.Sprintf("--project=%s", GcloudProject))
-	}
-	if GcloudRegion != "" {
-		args = append(args, fmt.Sprintf("--region=%s", GcloudRegion))
-	}
-	return args
-}
-
-
 func buildStatus(buildID string, args *[]string) (Build, error) {
 	command := exec.Command(
 		"gcloud", append([]string{"builds", "describe", buildID, "--format=json"}, (*args)...)...,

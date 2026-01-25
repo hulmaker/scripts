@@ -2,6 +2,24 @@ package builds
 
 import "github.com/spf13/cobra"
 
+
+var (
+	GcloudProject string
+	GcloudRegion  string
+)
+
+func ParseAdditionalArgs() []string {
+	args := []string{}
+	if GcloudProject != "" {
+		args = append(args, "--project="+GcloudProject)
+	}
+	if GcloudRegion != "" {
+		args = append(args, "--region="+GcloudRegion)
+	}
+	return args
+}
+
+
 var RootCmd = &cobra.Command{
 	Use:   "builds",
 	Short: "Utilities for Cloud Builds.",
