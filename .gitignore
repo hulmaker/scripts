@@ -31,8 +31,5 @@ go.work.sum
 # .idea/
 # .vscode/
 
-# Local bin directory
-bin/
-
 */.DS_Store
 
