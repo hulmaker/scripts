@@ -3,6 +3,8 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 	"os"
+
+	"gcp/cmd/builds"
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -22,4 +24,5 @@ func Execute() {
 }
 
 func init() {
+	rootCmd.AddCommand(builds.RootCmd)
 }

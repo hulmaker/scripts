@@ -2,9 +2,11 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/spf13/cobra"
 	"os/exec"
 	"strings"
+
+	"github.com/spf13/cobra"
+	"gcp/utils"
 )
 
 var (
@@ -12,11 +14,11 @@ var (
 	account string
 )
 
-func CmdActivate(name string) *exec.Cmd {
+func cmdConfigActivate(name string) *exec.Cmd {
 	return exec.Command("gcloud", "config", "configurations", "activate", name)
 }
 
-func CmdCreate(name string, project string, account string) *exec.Cmd {
+func cmdConfigCreate(name string, project string, account string) *exec.Cmd {
 	return exec.Command(
 		"gcloud",
 		"config",
@@ -29,7 +31,7 @@ func CmdCreate(name string, project string, account string) *exec.Cmd {
 }
 
 func activateCreateActivate(name string, project string, account string) error {
-	out, err := CmdActivate(name).CombinedOutput()
+	out, err := cmdConfigActivate(name).CombinedOutput()
 	if err == nil {
 		return nil
 	}
@@ -39,7 +41,7 @@ func activateCreateActivate(name string, project string, account string) error {
 	}
 
 	if project == "" || account == "" {
-		out, err = exec.Command("gcloud", "config", "configurations", "list").Output()
+		out, err = utils.CmdGcloudConfigList().Output()
 		msg := "config %q not found\nto create a new config, provide account and project"
 		if err != nil {
 			return fmt.Errorf(msg, name)
@@ -48,28 +50,15 @@ func activateCreateActivate(name string, project string, account string) error {
 
 	}
 
-	out, err = CmdCreate(name, project, account).CombinedOutput()
+	out, err = cmdConfigCreate(name, project, account).CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("creating config %s failed with:\n%s", name, string(out))
 	}
 
 	fmt.Printf("created new config: %s project: %s account %s\n", name, project, account)
-	out, err = CmdActivate(name).CombinedOutput()
+	out, err = cmdConfigActivate(name).CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("ativating config %s failed with:\n%s", name, string(out))
-	}
-	return nil
-}
-
-func RunCommands(commands [][]string) error {
-	for _, cmdArgs := range commands {
-		if len(cmdArgs) == 0 {
-			return fmt.Errorf("can't execute an empty command")
-		}
-		cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
-		if err := cmd.Run(); err != nil {
-			return err
-		}
 	}
 	return nil
 }
@@ -109,7 +98,7 @@ func login(cmd *cobra.Command, args []string) error {
 	}
 
 	// config exists and is active - default application...
-	err = RunCommands([][]string{
+	err = utils.RunCommands([][]string{
 		{"gcloud", "auth", "application-default", "login"},
 		{"gcloud", "config", "set", "disable_usage_reporting", "true"},
 	})
