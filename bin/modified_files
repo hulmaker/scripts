@@ -2,14 +2,14 @@
 
 # Find all the files that have been modified in the current branch. Filter by extension.
 # 
-# Usage: modified_files.sh [--extension ext] [--branch branch_name]
+# Usage: modified_files [--extension ext] [--branch branch_name]
 # 
 # Examples:
-#     # run with default values --extension .py and --branch main
-#     >>> ./scripts/modified_files.sh
+#     # default settings returns all modified .py files with (origin/main) branch
+#     >>> modified_files
 # 
-#     # get all .txt files that are modified from dev branch
-#     >>> ./scripts/modified_files.sh --extension .txt --branch dev
+#     # get all .txt files that differ from files in the local dev branch
+#     >>> modified_files --extension .txt --branch dev
 # 
 # 
 # Note: This does not return untracked files, you need to add them first.
@@ -17,7 +17,7 @@
 
 # Default values
 extension=".py"
-branch="main"
+branch="origin/main"
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -42,7 +42,7 @@ done
 extension=$(echo "$extension" | sed 's/\./\\./g')
 # thid only works for staged changes. If the file was renamed (R), the existing file is in the third column.
 files=$(
-    git diff --name-status origin/"$branch" |
+    git diff --name-status "$branch" |
     awk '$1 != "D" { if ($1 ~ /^R/) print $3; else print $2 }' |
     grep ".*$extension$" | tr '\n' ' '
 )
