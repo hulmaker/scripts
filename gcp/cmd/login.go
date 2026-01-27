@@ -110,7 +110,7 @@ func login(cmd *cobra.Command, args []string) error {
 
 var loginCmd = &cobra.Command{
 	Use:   "login <config-name>",
-	Short: "Authenticate and setup a gcloud configuration.",
+	Short: "Log in to a gcloud SDK and set default application login.",
 	Long: `Authenticate with Google Cloud and setup a specific configuration with project and account settings.
 It ensures application default credentials are set correctly for local development.`,
 	RunE: login,

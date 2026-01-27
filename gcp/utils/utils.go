@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"path"
+	"net/url"
 	"fmt"
 	"os/exec"
 	"runtime"
@@ -51,6 +53,27 @@ func PrintTable(data [][]string, separator string, formatter CellFormatter) erro
 	}
 	return nil
 }
+
+
+// A safe way to create escaped version of url: <part_0>/<part_1>/.../<parts_n>/?<key_1>=<val_1>&<key_2>=<val_2>
+func BuildUrl(parts []string, args map[string]string) (string, error) {
+	u, err := url.Parse(path.Join(parts...))
+	if err != nil {
+		return "", err
+	}
+	query := u.Query()
+	for key, val := range args {
+		_key := strings.TrimSpace(key)
+		_val := strings.TrimSpace(val)
+		if _key == "" || _val == "" {
+			continue
+		}
+		query.Set(_key, _val)
+	}
+	u.RawQuery = query.Encode()
+	return u.String(), nil
+}
+
 
 func OpenBrowser(url string) error {
 	fmt.Printf("Opening url in default browser. If nothing happens, plase visit:\n%s\n", url)

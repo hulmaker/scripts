@@ -15,7 +15,9 @@ go install gcp
 - **`builds`**: Utilities for Cloud Builds.
   - **`list`**: List and filter recent cloud builds.
   - **`watch`**: Monitor a build and trigger notifications or commands on completion.
-- **`console`**: Open the Google Cloud Console in your default browser.
+- **`open`**: Open the Google Cloud Console with given page in your default browser.
+  - **`console`**: Open the Google Cloud Console
+  - **`storage`**: Open the storage with given location
 
 Use `gcp [command] --help` for more information.
 

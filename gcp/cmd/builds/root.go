@@ -22,7 +22,7 @@ func ParseAdditionalArgs() []string {
 
 var RootCmd = &cobra.Command{
 	Use:   "builds",
-	Short: "Utilities for Cloud Builds.",
+	Short: "Utilities for listing and actively watching cloud builds.",
 }
 
 func init() {
