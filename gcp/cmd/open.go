@@ -1,45 +1,37 @@
 package cmd
 
 import (
-	"strings"
 	"fmt"
 	"gcp/utils"
 	"maps"
 	"slices"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
 
-var (
-	// TODO: Is it global as in the whole project? If I name it simple project, I get duplicate warning
-	userProject string
-	configName string
-)
-
-
-
 // a safe way to create escaped version of: <base>/<parts/.../>?authuser=1&project=<project_value>
 func gcloudUrlBuilder(parts []string) (string, error) {
 	return utils.BuildUrl(
-		parts, map[string]string{"authuser": "1", "project": userProject},
+		parts, map[string]string{"authuser": "1", "project": project},
 	)
 }
 
-
 type urlOption struct {
-	url string
+	url  string
 	args []string
 }
 
 var baseOptions = map[string]urlOption{
-	"console":	{"https://console.cloud.google.com/welcome", []string{}},
-    "trigger":	{"https://console.cloud.google.com/cloud-build/triggers", []string{}},
-    "compute":	{"https://console.cloud.google.com/compute/instances", []string{}},
-    "storage":	{"https://console.cloud.google.com/storage/browser", []string{"<path>?"}},
+	"console": {"https://console.cloud.google.com/welcome", []string{}},
+	"trigger": {"https://console.cloud.google.com/cloud-build/triggers", []string{}},
+	"compute": {"https://console.cloud.google.com/compute/instances", []string{}},
+	"storage": {"https://console.cloud.google.com/storage/browser", []string{"<path>?"}},
 }
 
 // description of keys
 var baseOptionsString string = fmt.Sprintf("%v", slices.Collect(maps.Keys(baseOptions)))
+
 // description with args
 var baseOptionsDesc string = func(map[string]urlOption) string {
 	lines := []string{}
@@ -49,11 +41,10 @@ var baseOptionsDesc string = func(map[string]urlOption) string {
 	return strings.Join(lines, "\n")
 }(baseOptions)
 
-
 var openCmd = &cobra.Command{
 	Use:   "open " + baseOptionsString + " [args...]",
 	Short: "Open the Google Cloud Console in your default browser. See the full help for args description.",
-	Long:fmt.Sprintf(`Opens the Google Cloud Console in your default web browser.
+	Long: fmt.Sprintf(`Opens the Google Cloud Console in your default web browser.
 Uses the current active project by default, or a specific project/config if specified.
 
 Available args for each option:
@@ -68,29 +59,29 @@ Examples:
 		if !ok {
 			return fmt.Errorf("unknown option %q", args[0])
 		}
-		if len(args) - 1  != len(option.args) {
-			return fmt.Errorf("too many arguments for option %q - see the full --help", args[0]) 
+		if len(args)-1 != len(option.args) {
+			return fmt.Errorf("too many arguments for option %q - see the full --help", args[0])
 		}
-		if userProject != "" && configName != "" {
+		if project != "" && config != "" {
 			return fmt.Errorf("can't use --project and --config together")
 		}
 
-		if configName != "" {
-			out, err := utils.CmdGcloudConfigDescribe(configName, "get(properties.core.project)").CombinedOutput()
+		if config != "" {
+			out, err := utils.CmdGcloudConfigDescribe(config, "get(properties.core.project)").CombinedOutput()
 			if err != nil {
-				fmt.Printf("Unable to retrieve project for config %s.\nError:\n%s\n", configName, string(out))
+				fmt.Printf("Unable to retrieve project for config %s.\nError:\n%s\n", config, string(out))
 				fmt.Println("Opening vanilla console.")
 			} else {
-				userProject = string(out)
+				project = string(out)
 			}
 		}
 
-		if userProject == "" {
+		if project == "" {
 			out, err := utils.CmdGcloudGetValue("project").Output()
 			if err != nil {
 				fmt.Printf("Unable to retrieve current project.\n")
 			} else {
-				userProject = string(out)
+				project = string(out)
 			}
 		}
 
@@ -106,6 +97,6 @@ Examples:
 
 func init() {
 	rootCmd.AddCommand(openCmd)
-	openCmd.Flags().StringVar(&userProject, "project", "", "Target Project ID")
-	openCmd.Flags().StringVarP(&configName, "config", "c", "", "Use Project ID from this gcloud configuration")
+	openCmd.Flags().StringVar(&project, "project", "", "Target Project ID")
+	openCmd.Flags().StringVarP(&config, "config", "c", "", "Use Project ID from this gcloud configuration")
 }

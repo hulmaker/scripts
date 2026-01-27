@@ -7,6 +7,13 @@ import (
 	"gcp/cmd/builds"
 )
 
+var (
+	// TODO: Is it global as in the whole project? If I name it simple project, I get duplicate warning
+	project string
+	config  string
+	account string
+)
+
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "gcp",

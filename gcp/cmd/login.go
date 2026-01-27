@@ -5,60 +5,55 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/spf13/cobra"
 	"gcp/utils"
+	"github.com/spf13/cobra"
 )
 
-var (
-	project string
-	account string
-)
-
-func cmdConfigActivate(name string) *exec.Cmd {
-	return exec.Command("gcloud", "config", "configurations", "activate", name)
+func cmdConfigActivate() *exec.Cmd {
+	return exec.Command("gcloud", "config", "configurations", "activate", config)
 }
 
-func cmdConfigCreate(name string, project string, account string) *exec.Cmd {
+func cmdConfigCreate() *exec.Cmd {
 	return exec.Command(
 		"gcloud",
 		"config",
 		"configurations",
 		"create",
-		name,
-		fmt.Sprintf("--account=%q", account),
-		fmt.Sprintf("--project=%q", project),
+		config,
+		"--account="+account,
+		"--project="+project,
 	)
 }
 
-func activateCreateActivate(name string, project string, account string) error {
-	out, err := cmdConfigActivate(name).CombinedOutput()
+func activateCreateActivate() error {
+	out, err := cmdConfigActivate().CombinedOutput()
 	if err == nil {
 		return nil
 	}
 	if !strings.Contains(string(out), "does not exist") {
 		// account exists, activation failed
-		return fmt.Errorf("ativating config %s failed with:\n%s", name, string(out))
+		return fmt.Errorf("ativating config %s failed with:\n%s", config, string(out))
 	}
 
 	if project == "" || account == "" {
 		out, err = utils.CmdGcloudConfigList().Output()
 		msg := "config %q not found\nto create a new config, provide account and project"
 		if err != nil {
-			return fmt.Errorf(msg, name)
+			return fmt.Errorf(msg, config)
 		}
-		return fmt.Errorf(msg+" (or see the available configs below)\n\n%s", name, string(out))
+		return fmt.Errorf(msg+" (or see the available configs below)\n\n%s", config, string(out))
 
 	}
 
-	out, err = cmdConfigCreate(name, project, account).CombinedOutput()
+	out, err = cmdConfigCreate().CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("creating config %s failed with:\n%s", name, string(out))
+		return fmt.Errorf("creating config %s failed with:\n%s", config, string(out))
 	}
 
-	fmt.Printf("created new config: %s project: %s account %s\n", name, project, account)
-	out, err = cmdConfigActivate(name).CombinedOutput()
+	fmt.Printf("created new config: %s project: %s account %s\n", config, project, account)
+	out, err = cmdConfigActivate().CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("ativating config %s failed with:\n%s", name, string(out))
+		return fmt.Errorf("ativating config %s failed with:\n%s", config, string(out))
 	}
 	return nil
 }
@@ -91,8 +86,8 @@ func login(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("specify the config name you want to activate")
 		// todo if is active, do nothing
 	}
-	name := args[0]
-	err := activateCreateActivate(name, project, account)
+	config = args[0]
+	err := activateCreateActivate()
 	if err != nil {
 		return err
 	}

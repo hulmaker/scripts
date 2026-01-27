@@ -10,7 +10,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-
 var reset = "\033[0m"
 var statusMap = map[string]string{
 	"SUCCESS":   "\033[1;32m", // Green

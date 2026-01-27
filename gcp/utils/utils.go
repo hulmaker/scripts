@@ -1,14 +1,13 @@
 package utils
 
 import (
-	"path"
-	"net/url"
 	"fmt"
+	"net/url"
 	"os/exec"
+	"path"
 	"runtime"
 	"strings"
 )
-
 
 // clamps text to given width
 func Clamp(text string, width uint) string {
@@ -54,7 +53,6 @@ func PrintTable(data [][]string, separator string, formatter CellFormatter) erro
 	return nil
 }
 
-
 // A safe way to create escaped version of url: <part_0>/<part_1>/.../<parts_n>/?<key_1>=<val_1>&<key_2>=<val_2>
 func BuildUrl(parts []string, args map[string]string) (string, error) {
 	u, err := url.Parse(path.Join(parts...))
@@ -73,7 +71,6 @@ func BuildUrl(parts []string, args map[string]string) (string, error) {
 	u.RawQuery = query.Encode()
 	return u.String(), nil
 }
-
 
 func OpenBrowser(url string) error {
 	fmt.Printf("Opening url in default browser. If nothing happens, plase visit:\n%s\n", url)

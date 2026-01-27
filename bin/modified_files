@@ -5,18 +5,18 @@
 # Usage: modified_files [--extension ext] [--branch branch_name]
 # 
 # Examples:
-#     # default settings returns all modified .py files with (origin/main) branch
+#     # default settings returns all modified files with (origin/main) branch
 #     >>> modified_files
 # 
-#     # get all .txt files that differ from files in the local dev branch
-#     >>> modified_files --extension .txt --branch dev
+#     # get all .txt files that differ from files in the remote dev branch
+#     >>> modified_files --extension .txt --branch origin/dev
 # 
 # 
 # Note: This does not return untracked files, you need to add them first.
 # This is basically a complicated one-liner, do not worry about it too much.
 
 # Default values
-extension=".py"
+extension=""
 branch="origin/main"
 
 # Parse command line arguments
