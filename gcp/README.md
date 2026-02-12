@@ -11,13 +11,13 @@ go install gcp
 
 ## Commands
 
-- **`login`**: Authenticate and setup a `gcloud` configuration with application default credentials.
+- **`login`**: Authenticate and setup a `gcloud` configuration with application default credentials. You can refer to your configs in other commands.
 - **`builds`**: Utilities for Cloud Builds.
   - **`list`**: List and filter recent cloud builds.
   - **`watch`**: Monitor a build and trigger notifications or commands on completion.
-- **`open`**: Open the Google Cloud Console with given page in your default browser.
-  - **`console`**: Open the Google Cloud Console
-  - **`storage`**: Open the storage with given location
+- **`open`**: Open the Google Cloud Console with given page and parameters in your default browser.
+  - **`console`**, **`storage`**, **`trigger`**, **`compute`**, **`builds`**
+
 
 Use `gcp [command] --help` for more information.
 
@@ -33,4 +33,16 @@ go build -o gcp main.go
 
 ```bash
 go run main.go [command]
+```
+
+### Formatting, linting
+
+TODO: reasonable linting config for [golangci-lint](https://golangci-lint.run/docs/configuration/file/)
+
+```bash
+# format with
+go fmt ./...
+
+# linter
+golangci-lint run
 ```

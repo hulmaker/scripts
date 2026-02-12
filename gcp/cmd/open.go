@@ -27,16 +27,28 @@ var baseOptions = map[string]urlOption{
 	"trigger": {"https://console.cloud.google.com/cloud-build/triggers", []string{}},
 	"compute": {"https://console.cloud.google.com/compute/instances", []string{}},
 	"storage": {"https://console.cloud.google.com/storage/browser", []string{"<path>?"}},
+	"builds":  {"https://console.cloud.google.com/cloud-build/builds", []string{"<build_id>?"}},
 }
 
-// description of keys
+// description of all available keys
 var baseOptionsString string = fmt.Sprintf("%v", slices.Collect(maps.Keys(baseOptions)))
 
-// description with args
+// description of all options with args
 var baseOptionsDesc string = func(map[string]urlOption) string {
+	padding := 0
+	for key := range baseOptions {
+		if len(key) > padding {
+			padding = len(key)
+		}
+	}
+
 	lines := []string{}
 	for key, option := range baseOptions {
-		lines = append(lines, fmt.Sprintf("\t%s:\t%v", key, strings.Join(option.args, " ")))
+		line := "\t" + key
+		if len(option.args) > 0 {
+			line = line + " " + strings.Join(option.args, " ")
+		}
+		lines = append(lines, line)
 	}
 	return strings.Join(lines, "\n")
 }(baseOptions)
@@ -60,7 +72,7 @@ Examples:
 			return fmt.Errorf("unknown option %q", args[0])
 		}
 		if len(args)-1 != len(option.args) {
-			return fmt.Errorf("too many arguments for option %q - see the full --help", args[0])
+			return fmt.Errorf("invalid arguments for option %q - see the full --help", args[0])
 		}
 		if project != "" && config != "" {
 			return fmt.Errorf("can't use --project and --config together")

@@ -45,6 +45,7 @@ var ListCmd = &cobra.Command{
 Examples:
   gcp builds list -l 10 -w 40 --ongoing --filter="create_time>2026-01-20"
 
+Note: Using filter is reccommended with --list. Filter makes the fetch significantly slower.
 Docs: https://docs.cloud.google.com/build/docs/view-build-results`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		width, _ := cmd.Flags().GetUint("column-width")
