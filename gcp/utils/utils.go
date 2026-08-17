@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"net/url"
+	"os"
 	"os/exec"
 	"path"
 	"runtime"
@@ -94,6 +95,8 @@ func RunCommands(commands [][]string) error {
 			return fmt.Errorf("can't execute an empty command")
 		}
 		cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
 			return err
 		}

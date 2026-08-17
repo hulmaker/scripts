@@ -14,15 +14,17 @@ func cmdConfigActivate() *exec.Cmd {
 }
 
 func cmdConfigCreate() *exec.Cmd {
-	return exec.Command(
-		"gcloud",
-		"config",
-		"configurations",
-		"create",
-		config,
-		"--account="+account,
-		"--project="+project,
-	)
+	return exec.Command("gcloud", "config", "configurations", "create", config)
+}
+
+func validateAccountProjectFlags() error {
+	if project != "" && strings.Contains(project, "@") {
+		return fmt.Errorf("--project %q looks like an email; did you mean --account?", project)
+	}
+	if account != "" && !strings.Contains(account, "@") {
+		return fmt.Errorf("--account %q does not look like an email; did you mean --project?", account)
+	}
+	return nil
 }
 
 func activateCreateActivate() error {
@@ -31,18 +33,16 @@ func activateCreateActivate() error {
 		return nil
 	}
 	if !strings.Contains(string(out), "does not exist") {
-		// account exists, activation failed
-		return fmt.Errorf("ativating config %s failed with:\n%s", config, string(out))
+		return fmt.Errorf("activating config %s failed with:\n%s", config, string(out))
 	}
 
 	if project == "" || account == "" {
 		out, err = utils.CmdGcloudConfigList().Output()
-		msg := "config %q not found\nto create a new config, provide account and project"
+		msg := "config %q not found\nto create a new config, provide --account and --project"
 		if err != nil {
 			return fmt.Errorf(msg, config)
 		}
 		return fmt.Errorf(msg+" (or see the available configs below)\n\n%s", config, string(out))
-
 	}
 
 	out, err = cmdConfigCreate().CombinedOutput()
@@ -53,7 +53,7 @@ func activateCreateActivate() error {
 	fmt.Printf("created new config: %s project: %s account %s\n", config, project, account)
 	out, err = cmdConfigActivate().CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("ativating config %s failed with:\n%s", config, string(out))
+		return fmt.Errorf("activating config %s failed with:\n%s", config, string(out))
 	}
 	return nil
 }
@@ -86,17 +86,32 @@ func login(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("specify the config name you want to activate")
 		// todo if is active, do nothing
 	}
+	if err := validateAccountProjectFlags(); err != nil {
+		return err
+	}
 	config = args[0]
 	err := activateCreateActivate()
 	if err != nil {
 		return err
 	}
 
-	// config exists and is active - default application...
-	err = utils.RunCommands([][]string{
-		{"gcloud", "auth", "application-default", "login"},
-		{"gcloud", "config", "set", "disable_usage_reporting", "true"},
-	})
+	commands := [][]string{}
+	if account != "" {
+		commands = append(commands, []string{"gcloud", "config", "set", "account", account})
+	}
+	if project != "" {
+		commands = append(commands, []string{"gcloud", "config", "set", "project", project})
+	}
+	adcLogin := []string{"gcloud", "auth", "application-default", "login"}
+	if account != "" {
+		adcLogin = append(adcLogin, "--account="+account)
+	}
+	commands = append(commands,
+		adcLogin,
+		[]string{"gcloud", "config", "set", "disable_usage_reporting", "true"},
+	)
+
+	err = utils.RunCommands(commands)
 	if err != nil {
 		return fmt.Errorf("failed setting application-default")
 	}
@@ -107,7 +122,9 @@ var loginCmd = &cobra.Command{
 	Use:   "login <config-name>",
 	Short: "Log in to a gcloud SDK and set default application login.",
 	Long: `Authenticate with Google Cloud and setup a specific configuration with project and account settings.
-It ensures application default credentials are set correctly for local development.`,
+It ensures application default credentials are set correctly for local development.
+
+List existing configurations with: gcloud config configurations list`,
 	RunE: login,
 }
 
