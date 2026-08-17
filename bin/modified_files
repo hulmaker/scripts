@@ -17,7 +17,7 @@
 
 # Default values
 extension=""
-branch="origin/main"
+branch="main"
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -38,12 +38,23 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# get all the files that have been modified in the current branch, exclude deleted files
+
+# 1. Find the common ancestor between the target branch and the current HEAD
+# This isolates your branch's unique commits from upstream changes
+if ! merge_base=$(git merge-base "$branch" HEAD 2>/dev/null); then
+    echo "Error: Could not find common ancestor. Check if branch '$branch' exists locally."
+    exit 1
+fi
+
+# 2. Get all files modified since the fork point, excluding deleted files
 extension=$(echo "$extension" | sed 's/\./\\./g')
-# thid only works for staged changes. If the file was renamed (R), the existing file is in the third column.
+
+# This only works for staged/unstaged tracked changes. 
+# If the file was renamed (R), the existing file is in the third column.
 files=$(
-    git diff --name-status "$branch" |
+    git diff --name-status "$merge_base" |
     awk '$1 != "D" { if ($1 ~ /^R/) print $3; else print $2 }' |
     grep ".*$extension$" | tr '\n' ' '
 )
+
 echo "$files"
