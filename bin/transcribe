@@ -1,0 +1,200 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.10"
+# dependencies = ["mlx-whisper", "parakeet-mlx"]
+# ///
+"""Record from the default Mac microphone and transcribe with MLX Whisper large-v3-turbo or Parakeet.
+
+Python alternative to `transcribe`, running on Apple Silicon via mlx-whisper (whisper) or parakeet-mlx (parakeet).
+Defaults to parakeet for English and whisper for any other language (e.g. cs).
+Press Enter or Space to stop recording and transcribe; Ctrl+C cancels and discards the recording.
+Requires ffmpeg. The first run downloads the model from the Hugging Face hub.
+
+Usage: transcribe [--language en] [--model whisper|parakeet] [FILE]
+
+With FILE, skips recording and writes the transcript next to it as <FILE stem>.txt.
+"""
+
+import argparse
+import datetime
+import logging
+import pathlib
+import select
+import signal
+import subprocess
+import sys
+import termios
+import time
+import tty
+
+RECORDINGS_DIR = pathlib.Path.home() / "Recordings"
+MODEL_REPOS = {
+    "whisper": "mlx-community/whisper-large-v3-turbo",
+    "parakeet": "mlx-community/parakeet-tdt-0.6b-v3",
+}
+
+DEFAULT_LANGUAGE = "en"
+PARAKEET_LANGUAGE = "en"
+KEY_POLL_SECONDS = 0.5
+STOP_KEYS = ("\n", "\r", " ")
+
+_logger = logging.getLogger(__name__)
+
+
+def _start_recording(audio_path: pathlib.Path) -> subprocess.Popen[bytes]:
+    return subprocess.Popen(
+        [
+            "ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "warning",
+            "-f", "avfoundation", "-i", ":0",
+            "-c:a", "pcm_s16le",
+            str(audio_path),
+        ]
+    )  # fmt: skip
+
+
+def _stop_recording(ffmpeg: subprocess.Popen[bytes]) -> None:
+    """Interrupts ffmpeg (rather than killing it) so the WAV header is finalized."""
+    if ffmpeg.poll() is None:
+        ffmpeg.send_signal(signal.SIGINT)
+    ffmpeg.wait()
+
+
+def _wait_for_stop_key(ffmpeg: subprocess.Popen[bytes]) -> None:
+    """Blocks until a stop key is pressed or ffmpeg exits on its own."""
+    if not sys.stdin.isatty():
+        ffmpeg.wait()
+        return
+    fd = sys.stdin.fileno()
+    saved_attributes = termios.tcgetattr(fd)
+    try:
+        tty.setcbreak(fd)  # Unlike setraw, keeps Ctrl+C delivering SIGINT.
+        while ffmpeg.poll() is None:
+            if (
+                select.select([sys.stdin], [], [], KEY_POLL_SECONDS)[0]
+                and sys.stdin.read(1) in STOP_KEYS
+            ):
+                return
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, saved_attributes)
+
+
+def _transcribe_whisper(audio_path: pathlib.Path, language: str) -> str:
+    import mlx_whisper  # Slow import; keep it out of the recording path.
+
+    result = mlx_whisper.transcribe(
+        str(audio_path), path_or_hf_repo=MODEL_REPOS["whisper"], language=language
+    )
+    return str(result["text"]).strip()
+
+
+def _transcribe_parakeet(audio_path: pathlib.Path) -> str:
+    from parakeet_mlx import (
+        from_pretrained,
+    )  # Slow import; keep it out of the recording path.
+
+    model = from_pretrained(MODEL_REPOS["parakeet"])
+    return str(model.transcribe(str(audio_path)).text).strip()
+
+
+def _audio_duration_seconds(audio_path: pathlib.Path) -> float:
+    output = subprocess.run(
+        ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", str(audio_path)],
+        capture_output=True, text=True, check=True,
+    ).stdout  # fmt: skip
+    return float(output.strip())
+
+
+def _record(audio_path: pathlib.Path) -> bool:
+    """Records until a stop key is pressed. Returns False if canceled."""
+    _logger.info("Recording to: %s", audio_path)
+    _logger.info("Press Enter or Space to stop recording and transcribe.")
+    _logger.info("Press Ctrl+C to cancel.")
+
+    ffmpeg = _start_recording(audio_path)
+    try:
+        _wait_for_stop_key(ffmpeg)
+    except KeyboardInterrupt:
+        _stop_recording(ffmpeg)
+        audio_path.unlink(missing_ok=True)
+        _logger.info("Canceled.")
+        return False
+    _stop_recording(ffmpeg)
+    _logger.info("Recording finished.")
+    return True
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument(
+        "file",
+        nargs="?",
+        type=pathlib.Path,
+        help="Existing audio file to transcribe instead of recording",
+    )
+    parser.add_argument(
+        "--language",
+        default=DEFAULT_LANGUAGE,
+        help="Spoken language, e.g. cs, en (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--model",
+        choices=sorted(MODEL_REPOS),
+        help="Model family: whisper uses mlx-whisper, parakeet uses parakeet-mlx (default: parakeet for en, whisper otherwise)",
+    )
+    args = parser.parse_args()
+
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+
+    model = args.model or (
+        "parakeet" if args.language == PARAKEET_LANGUAGE else "whisper"
+    )
+    if model == "parakeet" and args.language != DEFAULT_LANGUAGE:
+        _logger.warning(
+            "Parakeet ignores --language %s and detects the language itself.",
+            args.language,
+        )
+
+    if args.file is not None:
+        audio_path = args.file.expanduser()
+        if not audio_path.is_file():
+            _logger.error("File not found: %s", audio_path)
+            return 1
+        transcript_path = audio_path.with_suffix(".txt")
+    else:
+        RECORDINGS_DIR.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+        audio_path = RECORDINGS_DIR / f"{timestamp}.wav"
+        transcript_path = RECORDINGS_DIR / f"{timestamp}.txt"
+        if not _record(audio_path):
+            return 130
+        if not audio_path.exists() or audio_path.stat().st_size == 0:
+            _logger.error("Recording failed or is empty.")
+            return 1
+
+    _logger.info("Transcribing with %s (%s)...", model, MODEL_REPOS[model])
+    start = time.perf_counter()
+    if model == "parakeet":
+        text = _transcribe_parakeet(audio_path)
+    else:
+        text = _transcribe_whisper(audio_path, args.language)
+    processing_seconds = time.perf_counter() - start
+    audio_seconds = _audio_duration_seconds(audio_path)
+    _logger.info(
+        "Processing time: %.2fs, audio duration: %.2fs, RTFx: %.1f",
+        processing_seconds, audio_seconds, audio_seconds / processing_seconds,
+    )  # fmt: skip
+    transcript_path.write_text(text + "\n")
+
+    if not text:
+        _logger.error("No speech detected in the recording.")
+        _logger.info("Recording: %s", audio_path)
+        return 1
+
+    _logger.info("Transcript: %s", transcript_path)
+    _logger.info("Recording: %s", audio_path)
+    print(text)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
