@@ -7,7 +7,7 @@
 
 Python alternative to `transcribe`, running on Apple Silicon via mlx-whisper (whisper) or parakeet-mlx (parakeet).
 Defaults to parakeet for English and whisper for any other language (e.g. cs).
-Press Enter or Space to stop recording and transcribe; Ctrl+C cancels and discards the recording.
+Press Enter or Space to stop recording and transcribe; Ctrl+C cancels and asks whether to delete the recording (Y deletes, anything else keeps it).
 Requires ffmpeg. The first run downloads the model from the Hugging Face hub.
 
 Usage: transcribe [--language en] [--model whisper|parakeet] [FILE]
@@ -25,6 +25,7 @@ import subprocess
 import sys
 import termios
 import time
+import subprocess
 import tty
 
 RECORDINGS_DIR = pathlib.Path.home() / "Recordings"
@@ -104,19 +105,31 @@ def _audio_duration_seconds(audio_path: pathlib.Path) -> float:
     return float(output.strip())
 
 
+def _confirm_delete() -> bool:
+    """Asks whether to delete the recording. Only "Y" deletes; anything else saves."""
+    try:
+        answer = input("Delete the recording? [Y/n] ")
+    except (EOFError, KeyboardInterrupt):
+        return False
+    return answer.strip() == "Y"
+
+
 def _record(audio_path: pathlib.Path) -> bool:
     """Records until a stop key is pressed. Returns False if canceled."""
     _logger.info("Recording to: %s", audio_path)
     _logger.info("Press Enter or Space to stop recording and transcribe.")
-    _logger.info("Press Ctrl+C to cancel.")
+    _logger.info("Press Ctrl+C to cancel (you can then delete or keep the recording).")
 
     ffmpeg = _start_recording(audio_path)
     try:
         _wait_for_stop_key(ffmpeg)
     except KeyboardInterrupt:
         _stop_recording(ffmpeg)
-        audio_path.unlink(missing_ok=True)
-        _logger.info("Canceled.")
+        if _confirm_delete():
+            audio_path.unlink(missing_ok=True)
+            _logger.info("Canceled and deleted the recording.")
+        else:
+            _logger.info("Canceled. Recording saved to: %s", audio_path)
         return False
     _stop_recording(ffmpeg)
     _logger.info("Recording finished.")
@@ -192,6 +205,8 @@ def main() -> int:
 
     _logger.info("Transcript: %s", transcript_path)
     _logger.info("Recording: %s", audio_path)
+    _logger.info("Saving the text into the clipboard.")
+    subprocess.run(["pbcopy"], input=text, text=True)
     print(text)
     return 0
 

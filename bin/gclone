@@ -1,0 +1,38 @@
+#!/bin/zsh
+
+usage() {
+  cat <<'EOF'
+Usage: gclone <repo-url> [-h|--help]
+
+Clone a repository as a bare repo with a worktree for the default branch.
+
+Creates ./<name>/ containing:
+  .bare/       the bare clone
+  .git         file pointing at .bare
+  <branch>/    worktree for the remote's default branch
+
+Arguments:
+  <repo-url>   URL or path of the repository to clone
+
+Options:
+  -h, --help   Show this help and exit
+
+Example:
+  gclone git@github.com:user/project.git
+  # -> ./project/.bare and ./project/main/
+EOF
+}
+
+if [[ $# -ne 1 || $1 == -h || $1 == --help ]]; then
+  usage
+  [[ $1 == -h || $1 == --help ]] && exit 0
+  exit 1
+fi
+
+name=${${1:t}%.git}
+mkdir "$name" && cd "$name" || exit 1
+git clone --bare "$1" .bare
+echo "gitdir: ./.bare" >.git
+git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
+git fetch origin
+git worktree add "$(git symbolic-ref --short HEAD)"
